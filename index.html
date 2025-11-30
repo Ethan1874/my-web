@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DADDY HOME</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+        
+        body { font-family: 'Manrope', sans-serif; background-color: #f3f4f6; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 增强版毛玻璃效果 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .glass-dark {
+            background: rgba(46, 44, 56, 0.85);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+
+        .glass-gradient {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(217, 70, 239, 0.8));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px 0 rgba(139, 92, 246, 0.3);
+        }
+        
+        .text-balance { text-wrap: balance; }
+
+        .animate-enter { animation: enter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; transform: translateY(15px); }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        
+        @keyframes enter {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .calendar-day { transition: all 0.2s; }
+        .calendar-day:active { transform: scale(0.9); }
+
+        .chat-enter { animation: chatSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes chatSlideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* timeline line */
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            bottom: 0;
+            left: 20px;
+            width: 2px;
+            background: #e5e7eb;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="flex justify-center min-h-screen"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        
+        import { 
+            Home, BookOpen, Calendar, User, ChevronRight, ChevronLeft, 
+            MapPin, Phone, Star, Clock, ArrowUpRight, Play, Check, 
+            ArrowRight, Sparkles, GraduationCap, Baby, BrainCircuit, 
+            Palette, Info, X, Send, MessageCircle, Loader2, CalendarDays,
+            MoreHorizontal, Heart, Share2, Award, Edit3, Plus, Settings
+        } from 'https://esm.sh/lucide-react@0.344.0';
+
+        const apiKey = ""; 
+
+        // --- Mock Data ---
+        const BOOKINGS_DATA = [
+            { id: 1, type: 'Campus Tour', date: 'Sat, May 25', time: '10:00 AM', status: 'Confirmed', location: 'DADDY HOME Yangpu', theme: 'Math Logic Open Day' },
+            { id: 2, type: 'WePlay Trial', date: 'Wed, May 15', time: '02:00 PM', status: 'Completed', location: 'Room 102', theme: 'English Music' },
+        ];
+
+        const GROWTH_RECORDS = [
+            { 
+                id: 1, 
+                date: 'May 20, 2024', 
+                title: '专注力里程碑', 
+                desc: '今天在 Nido 教室，宝宝独立完成了“倒水工作”。她全神贯注地重复了 15 分钟，即便有水滴洒出，也尝试自己用抹布擦拭。这是秩序感建立的重要表现！',
+                tags: ['Independence', 'Motor Skills'],
+                img: 'https://images.unsplash.com/photo-1587654780291-39c940483713?auto=format&fit=crop&w=800&q=80',
+                teacher: 'Teacher Sarah'
+            },
+            { 
+                id: 2, 
+                date: 'May 18, 2024', 
+                title: 'Open Day: Nature Art', 
+                desc: '在周六的自然美育活动中，宝宝第一次接触了不同的树叶纹理，并制作了植物拓印画。他对色彩的敏感度很高。',
+                tags: ['Art', 'Sensory'],
+                img: 'https://images.unsplash.com/photo-1502086223501-68119136a5ed?auto=format&fit=crop&w=800&q=80',
+                teacher: 'Teacher Linda'
+            }
+        ];
+
+        const FAMILY_DATA = {
+            children: [
+                { name: "Luna", age: "2Y 4M", class: "IC - Sun Room", avatar: "👶🏻", tags: ["No Salt", "Peanut Allergy"], gender: "girl" }
+            ],
+            guardians: [
+                { name: "Mama Wang", role: "Mother", phone: "138****8888", avatar: "👩🏻", primary: true },
+                { name: "Papa Li", role: "Father", phone: "139****9999", avatar: "👨🏻", primary: false }
+            ]
+        };
+
+        const PROGRAMS_DATA = [
+            {
+                id: 'fullday',
+                title: 'Full Day Program',
+                titleCn: '全日制 (0-6岁)',
+                age: '0-6 Years',
+                tag: 'Core',
+                theme: 'bg-violet-50', 
+                accent: 'text-violet-900',
+                iconColor: 'text-violet-500',
+                imgPlaceholder: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+                description: 'DADDY HOME 核心全日制课程，包含 Toddler (0-3岁) 托班与 Preschool (3-6岁) 蒙氏学程。',
+                subPrograms: [
+                    { name: 'Toddler (IC)', age: '18m - 3y', desc: '支持独立行走与自我照顾，Nido完备环境。' },
+                    { name: 'Casa (Preschool)', age: '3y - 6y', desc: '五大领域蒙氏工作，双语沉浸式教学。' }
+                ],
+                details: ['Nido & Casa 完备环境', 'AMI/AMS 认证师资', '双语沉浸式环境', '生活习惯与专注力培养'],
+                curriculum: [
+                    { time: '08:30', activity: 'Arrival & Morning Circle', icon: '☀️' },
+                    { time: '09:00', activity: 'Montessori Work Cycle', icon: '🧩' },
+                    { time: '11:00', activity: 'Outdoor / Garden Time', icon: '🌳' },
+                    { time: '12:00', activity: 'Lunch & Nap', icon: '🥗' },
+                    { time: '14:30', activity: 'Project / Art / Dismissal', icon: '🎨' },
+                ],
+                teachers: [
+                    { name: 'Sarah Wu', role: 'IC Lead Guide', exp: '8 Years' },
+                    { name: 'David Miller', role: 'Casa Lead Guide', exp: '10 Years' },
+                ]
+            },
+            {
+                id: 'mommy-me',
+                title: 'Mommy & Me',
+                titleCn: '亲子早教',
+                age: '5-38 Months',
+                tag: 'Family',
+                theme: 'bg-yellow-50',
+                accent: 'text-yellow-800',
+                iconColor: 'text-yellow-600',
+                imgPlaceholder: 'linear-gradient(to top, #fef9c3 0%, #fffbeb 100%)',
+                description: '50分钟沉浸式趣玩趣学。家长与孩子共同成长的空间，建立亲密联结，平稳过渡分离焦虑。',
+                details: ['Musical Fitness 音乐体适能', 'Sensory 艺术感官', 'Socializing 社交启蒙'],
+                curriculum: [
+                    { time: '10 min', activity: 'Hello Song', icon: '🎵' },
+                    { time: '20 min', activity: 'Theme Activity', icon: '✨' },
+                    { time: '15 min', activity: 'Gross Motor', icon: '🏃' },
+                    { time: '05 min', activity: 'Goodbye', icon: '👋' },
+                ],
+                teachers: [
+                    { name: 'Jessica Lee', role: 'Early Childhood Specialist', exp: '7 Years' },
+                ]
+            },
+            {
+                id: 'weplay',
+                title: 'WePlay',
+                titleCn: '美语玩习',
+                age: '10-36 Months',
+                tag: 'Language',
+                theme: 'bg-purple-50',
+                accent: 'text-purple-900',
+                iconColor: 'text-purple-500',
+                imgPlaceholder: 'linear-gradient(120deg, #f3e8ff 0%, #ffffff 100%)',
+                description: 'English WePlay。在真实的游戏与互动体验中，自然习得第二语言，让孩子“玩进去”。',
+                details: ['Immersive English 全英文环境', 'Play-based Learning', 'Global Culture 多元文化'],
+                curriculum: [
+                    { time: 'Warm up', activity: 'English Songs & Rhymes', icon: '🎤' },
+                    { time: 'Explore', activity: 'Story & Drama', icon: '📖' },
+                    { time: 'Create', activity: 'Hands-on Craft', icon: '✂️' },
+                ],
+                teachers: [
+                    { name: 'Teacher Linda', role: 'Native English Speaker', exp: '5 Years' },
+                ]
+            },
+            {
+                id: 'monticlass',
+                title: 'Monti Class',
+                titleCn: '蒙氏提升课',
+                age: '3-6 Years',
+                tag: 'Academic',
+                theme: 'bg-amber-50',
+                accent: 'text-amber-900',
+                iconColor: 'text-amber-600',
+                imgPlaceholder: 'linear-gradient(to top, #fff7ed 0%, white 100%)',
+                description: '针对3-6岁儿童的蒙氏学术专项提升。涵盖数学逻辑、中英文语言构建。可见的学习成果。',
+                details: ['Monti Math 蒙氏数学', 'Phonics & Reading', 'Chinese Literacy 中文读写'],
+                curriculum: [
+                    { time: 'Focus', activity: 'Individual Work', icon: '🔢' },
+                    { time: 'Practice', activity: 'Group Lesson', icon: '🗣️' },
+                    { time: 'Review', activity: 'Progress Check', icon: '📝' },
+                ],
+                teachers: [
+                    { name: 'Ms. Wang', role: 'Academic Lead', exp: '12 Years' },
+                ]
+            },
+            {
+                id: 'weekend',
+                title: 'Weekend Camp',
+                titleCn: '周六成长营',
+                age: '2.5+ Years',
+                tag: 'Growth',
+                theme: 'bg-stone-100',
+                accent: 'text-stone-800',
+                iconColor: 'text-stone-500',
+                imgPlaceholder: 'linear-gradient(to right, #f5f5f4 0%, #e7e5e4 100%)',
+                description: 'Self-Growth Program。在有秩序的蒙氏环境中，延续平日的学习节奏。包含独立工作时间与团队社交活动。',
+                details: ['蒙氏核心领域', '独立工作时间', '规律节奏保持'],
+                curriculum: [
+                    { time: '09:00', activity: 'Arrival', icon: '☀️' },
+                    { time: '09:30', activity: 'Thematic Workshop', icon: '🔬' },
+                    { time: '11:00', activity: 'Free Play', icon: '🎡' },
+                ],
+                teachers: [
+                    { name: 'Team DADDY', role: 'Rotating Specialists', exp: 'Mixed' },
+                ]
+            }
+        ];
+
+        const OPEN_DAY_THEMES = {
+            '2024-05-04': '蒙氏感官体验 (Sensory Exploration)',
+            '2024-05-11': '母亲节特别活动 (Mother\'s Day Special)',
+            '2024-05-18': '自然美育探索 (Nature & Art)',
+            '2024-05-25': '数学逻辑启蒙 (Math Logic)',
+            '2024-06-01': '儿童节嘉年华 (Children\'s Day Party)',
+        };
+
+        // --- Helpers ---
+        async function callGeminiAPI(prompt, history = []) {
+            try {
+                const systemInstruction = `
+                    You are "DADDY AI", a warm, professional, and knowledgeable Montessori parenting assistant for "DADDY HOME" (睿福儿童之家).
+                    Your knowledge base includes Full Day Program, Mommy & Me, WePlay, Monti Class, Weekend Camp, and Open Day every Saturday.
+                    Respond in Chinese (Simplified). Keep responses concise.
+                `;
+
+                const maxRetries = 3;
+                let attempt = 0;
+                
+                while (attempt < maxRetries) {
+                    try {
+                        const response = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    contents: [
+                                        ...history.map(msg => ({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] })),
+                                        { role: 'user', parts: [{ text: prompt }] }
+                                    ],
+                                    systemInstruction: { parts: [{ text: systemInstruction }] }
+                                })
+                            }
+                        );
+
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const data = await response.json();
+                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，我现在有点忙，请稍后再试。";
+                    } catch (e) {
+                        attempt++;
+                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt))); 
+                    }
+                }
+                return "连接超时，请检查网络或稍后再试。";
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                return "系统维护中，请联系福儿老师。";
+            }
+        }
+
+        // --- Shared Components ---
+
+        const NavBar = ({ title, showBack, onBack, transparent = false }) => (
+            <div className={`absolute top-0 w-full z-40 transition-all duration-500 ${transparent ? 'bg-transparent' : 'bg-white/80 backdrop-blur-md border-b border-white/20'}`}>
+                <div className="pt-14 pb-3 px-6 flex items-center justify-between">
+                    {showBack ? (
+                        <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center active:scale-90 transition-all hover:bg-white/60">
+                            <ChevronLeft size={20} className="text-gray-800" />
+                        </button>
+                    ) : (<div className="w-10 h-10" />)}
+                    <div className={`font-bold text-base tracking-wide transition-opacity duration-300 ${transparent && !showBack ? 'opacity-0' : 'opacity-100 text-gray-900'}`}>{title}</div>
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-white/20 backdrop-blur-md shadow-sm">
+                        <span className="w-1 h-1 bg-gray-800 rounded-full"></span>
+                        <span className="w-1.5 h-1.5 bg-gray-800 rounded-full mx-0.5"></span>
+                        <span className="w-1 h-1 bg-gray-800 rounded-full"></span>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const FloatingTabBar = ({ activeTab, onChange }) => {
+            const tabs = [
+                { id: 'home', icon: Home, label: 'Explore' },
+                { id: 'programs', icon: BookOpen, label: 'Programs' },
+                { id: 'booking', icon: Calendar, label: 'Visit' },
+                { id: 'profile', icon: User, label: 'Me' },
+            ];
+            return (
+                <div className="absolute bottom-8 left-0 w-full px-6 z-50 flex justify-center pointer-events-none">
+                    <div className="glass-panel w-full max-w-[320px] px-2 py-3 rounded-[2rem] flex justify-between items-center pointer-events-auto transition-transform duration-300">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button key={tab.id} onClick={() => onChange(tab.id)} className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 ${isActive ? 'glass-dark shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}>
+                                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                    {isActive && <span className="absolute -bottom-6 text-[9px] font-bold text-gray-800 tracking-wider opacity-0 animate-enter">{tab.label}</span>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const AIChatOverlay = ({ isOpen, onClose }) => {
+            const [messages, setMessages] = useState([
+                { role: 'assistant', content: '您好！我是 DADDY AI 蒙氏助手 ✨\n我可以为您介绍课程，或者解答育儿困惑。' }
+            ]);
+            const [input, setInput] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const scrollRef = useRef(null);
+
+            useEffect(() => {
+                if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }, [messages]);
+
+            const handleSend = async () => {
+                if (!input.trim() || isLoading) return;
+                const userMsg = input.trim();
+                setInput('');
+                setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+                setIsLoading(true);
+                
+                const reply = await callGeminiAPI(userMsg, messages);
+                setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+                setIsLoading(false);
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="absolute inset-0 z-[60] flex items-end justify-center bg-black/20 backdrop-blur-sm chat-enter rounded-[50px] overflow-hidden">
+                    <div className="w-full h-[85%] glass-panel rounded-t-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative border-b-0">
+                        <div className="p-6 pb-4 bg-white/50 backdrop-blur-md border-b border-white/50 flex justify-between items-center z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex items-center justify-center text-white shadow-lg shadow-violet-200">
+                                    <Sparkles size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900">DADDY AI</h3>
+                                    <p className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Montessori Assistant</p>
+                                </div>
+                            </div>
+                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center text-gray-600 hover:bg-white transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white/30" ref={scrollRef}>
+                            {messages.map((msg, idx) => (
+                                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
+                                        msg.role === 'user' 
+                                            ? 'glass-gradient text-white rounded-br-none' 
+                                            : 'bg-white/80 backdrop-blur-sm text-gray-800 rounded-bl-none border border-white/50 shadow-sm'
+                                    }`}>
+                                        {msg.content.split('\n').map((line, i) => <p key={i} className={i > 0 ? "mt-2" : ""}>{line}</p>)}
+                                    </div>
+                                </div>
+                            ))}
+                            {isLoading && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl rounded-bl-none border border-white/50 shadow-sm flex gap-1">
+                                        <div className="w-2 h-2 bg-violet-400 rounded-full typing-dot"></div>
+                                        <div className="w-2 h-2 bg-violet-400 rounded-full typing-dot"></div>
+                                        <div className="w-2 h-2 bg-violet-400 rounded-full typing-dot"></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 bg-white/60 backdrop-blur-md border-t border-white/50">
+                            <div className="relative">
+                                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Ask me anything..." className="w-full bg-white/80 border border-white/50 rounded-2xl py-3.5 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/50 transition-all shadow-inner" />
+                                <button onClick={handleSend} disabled={!input.trim() || isLoading} className={`absolute right-2 top-2 p-1.5 rounded-xl transition-all ${input.trim() && !isLoading ? 'glass-gradient text-white' : 'bg-gray-200/50 text-gray-400'}`}>
+                                    {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CalendarWidget = ({ onDateSelect, selectedDate }) => {
+            const [currentMonth, setCurrentMonth] = useState(new Date(2024, 4, 1)); 
+            const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+            const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+            const days = [];
+            for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+            for (let i = 1; i <= daysInMonth; i++) days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+
+            const isSaturday = (date) => date && date.getDay() === 6;
+            const isSelected = (date) => date && selectedDate && date.toDateString() === selectedDate.toDateString();
+            const getTheme = (date) => {
+                if (!date) return '';
+                const dateStr = date.toISOString().split('T')[0];
+                return OPEN_DAY_THEMES[dateStr];
+            };
+
+            return (
+                <div className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-1 hover:bg-gray-100 rounded-full"><ChevronLeft size={20} className="text-gray-400"/></button>
+                            <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-1 hover:bg-gray-100 rounded-full"><ChevronRight size={20} className="text-gray-400"/></button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 mb-2 text-center">
+                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i} className="text-xs font-bold text-gray-400 py-2">{d}</div>)}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                        {days.map((date, idx) => {
+                            const hasTheme = getTheme(date);
+                            const selected = isSelected(date);
+                            return (
+                                <div key={idx} className="aspect-square flex flex-col items-center justify-center relative">
+                                    {date ? (
+                                        <button onClick={() => onDateSelect(date)} className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium calendar-day relative ${selected ? 'bg-violet-900 text-white shadow-lg shadow-violet-900/30' : hasTheme ? 'bg-violet-50 text-violet-900 font-bold border border-violet-100' : 'text-gray-700 hover:bg-gray-50'}`}>
+                                            {date.getDate()}
+                                            {hasTheme && !selected && <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-yellow-500"></span>}
+                                        </button>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {selectedDate && getTheme(selectedDate) && (
+                        <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-100 animate-enter glass-panel border-0">
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-violet-600 shadow-sm shrink-0"><Sparkles size={16} /></div>
+                                <div><p className="text-[10px] font-bold text-violet-500 uppercase tracking-wider mb-0.5">Open Day Theme</p><p className="text-sm font-bold text-violet-900">{getTheme(selectedDate)}</p></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- Page Components ---
+
+        const HomePage = ({ navigateToProgram, onBook }) => (
+            <div className="pb-32 pt-0 min-h-full bg-[#FCFCFC]">
+                <div className="relative w-full h-[320px] bg-white overflow-hidden rounded-b-[2.5rem] shadow-[0_20px_40px_-15px_rgba(124,58,237,0.05)] mb-8">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=1000&q=80')] bg-cover bg-center">
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+                    </div>
+                    <div className="absolute top-0 left-0 w-full h-full flex flex-col justify-end p-8 pb-10">
+                        <div className="animate-enter">
+                            <span className="inline-block px-3 py-1 bg-white/30 backdrop-blur-md border border-white/40 rounded-full text-[10px] font-bold text-white uppercase tracking-widest mb-3">Since 2017</span>
+                            <h1 className="text-4xl font-extrabold text-white leading-none mb-2 tracking-tight">Daddy<br/>Home.</h1>
+                            <p className="text-white/95 text-xs font-medium max-w-[200px] text-balance opacity-90">为发现每一个成长而生。<br/>Montessori Education.</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="px-8 mb-4 flex items-end justify-between animate-enter delay-100">
+                    <h2 className="text-xl font-bold text-gray-900">Featured<br/>Programs</h2>
+                    <button onClick={() => navigateToProgram(null)} className="text-xs font-bold text-violet-600 flex items-center gap-1 hover:text-violet-800 transition-colors bg-violet-50 px-3 py-1.5 rounded-full">View All <ArrowRight size={14} /></button>
+                </div>
+                <div className="flex overflow-x-auto no-scrollbar px-8 gap-4 pb-8 animate-enter delay-200 snap-x">
+                    {PROGRAMS_DATA.map((item) => (
+                        <div key={item.id} onClick={() => navigateToProgram(item)} className="snap-center shrink-0 w-[240px] h-[300px] bg-white rounded-[2rem] p-6 flex flex-col justify-between shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-gray-50 active:scale-95 transition-transform duration-300 hover:shadow-lg">
+                            <div>
+                                <div className="w-12 h-12 rounded-2xl mb-5 flex items-center justify-center text-2xl shadow-sm" style={{ background: item.imgPlaceholder }}>
+                                    <span className="filter grayscale-[0.2] contrast-[1.1]">{item.id === 'fullday' ? '🏫' : item.id === 'weplay' ? '🎡' : item.id === 'monticlass' ? '🎓' : '🧸'}</span>
+                                </div>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider ${item.accent} opacity-70`}>{item.age}</span>
+                                <h3 className="text-xl font-bold text-gray-900 mt-1 leading-tight">{item.title}</h3>
+                                <p className="text-xs text-gray-500 mt-1 font-medium">{item.titleCn}</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-900 group">DETAILS <div className={`w-4 h-4 rounded-full flex items-center justify-center text-white transition-colors ${item.id.includes('mommy') || item.id.includes('monti') ? 'bg-yellow-500' : 'bg-violet-600'}`}><ChevronRight size={10} /></div></div>
+                        </div>
+                    ))}
+                </div>
+                <div className="px-8 animate-enter delay-300">
+                    <div onClick={onBook} className="glass-dark rounded-[2rem] p-6 text-white relative overflow-hidden cursor-pointer active:scale-98 transition-transform shadow-xl">
+                        <div className="relative z-10 flex items-center justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2"><Star size={16} className="text-yellow-400" fill="currentColor" /><span className="text-xs font-bold text-white/80 uppercase tracking-wider">Book a Tour</span></div>
+                                <h3 className="text-lg font-bold mb-1">Visit Campus</h3>
+                                <p className="text-white/60 text-xs">预约线下探园，体验蒙氏环境。</p>
+                            </div>
+                            <div className="w-10 h-10 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-full flex items-center justify-center"><ArrowUpRight size={20} /></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const ProgramsPage = ({ onSelect }) => (
+            <div className="pb-32 px-6 pt-24 min-h-full bg-white">
+                <div className="flex items-center justify-between mb-8 animate-enter">
+                    <h1 className="text-2xl font-bold text-gray-900">All Programs</h1>
+                    <span className="text-xs font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg">{PROGRAMS_DATA.length} Courses</span>
+                </div>
+                <div className="grid grid-cols-1 gap-5">
+                    {PROGRAMS_DATA.map((item, idx) => (
+                        <div key={item.id} onClick={() => onSelect(item)} className="group relative h-40 rounded-[2rem] overflow-hidden cursor-pointer active:scale-[0.98] transition-all duration-300 animate-enter bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-violet-100" style={{ animationDelay: `${idx * 0.1}s` }}>
+                            <div className="absolute right-0 top-0 w-1/2 h-full opacity-30" style={{ background: item.imgPlaceholder }}></div>
+                            <div className="absolute inset-0 p-6 flex flex-col justify-center items-start">
+                                <div className="flex items-center gap-2 mb-2"><span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${item.theme} ${item.accent}`}>{item.tag}</span><span className="text-[10px] text-gray-400 font-bold">{item.age}</span></div>
+                                <h2 className="text-xl font-bold text-gray-900">{item.title}</h2>
+                                <p className="text-xs text-gray-500 font-medium">{item.titleCn}</p>
+                                <div className={`absolute right-6 bottom-6 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${item.theme} ${item.accent}`}><ArrowRight size={14} /></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const ProgramDetail = ({ program, onBook }) => {
+            const [activeTab, setActiveTab] = useState('Overview');
+            const renderContent = () => {
+                switch (activeTab) {
+                    case 'Overview': return (
+                        <div className="space-y-8 animate-enter">
+                            <div>
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">About Program</h3>
+                                <p className="text-base text-gray-800 leading-relaxed font-medium text-balance">{program.description}</p>
+                                {program.subPrograms && <div className="mt-4 grid grid-cols-1 gap-3">{program.subPrograms.map((sub, idx) => (<div key={idx} className="bg-[#FAFAFA] p-4 rounded-2xl border border-gray-100"><div className="flex justify-between items-center mb-1"><h4 className="font-bold text-gray-900 text-sm">{sub.name}</h4><span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm ${program.theme} ${program.accent}`}>{sub.age}</span></div><p className="text-xs text-gray-500">{sub.desc}</p></div>))}</div>}
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Highlights</h3>
+                                <div className="grid grid-cols-1 gap-3">{program.details.map((detail, idx) => (<div key={idx} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)]"><div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${program.theme} ${program.accent}`}><Check size={12} strokeWidth={3} /></div><span className="font-bold text-sm text-gray-900">{detail}</span></div>))}</div>
+                            </div>
+                        </div>
+                    );
+                    case 'Curriculum': return (<div className="space-y-4 animate-enter"><h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Typical Schedule</h3><div className="relative border-l-2 border-gray-100 ml-3 pl-6 space-y-6 py-2">{program.curriculum.map((item, idx) => (<div key={idx} className="relative"><div className={`absolute -left-[31px] top-1 w-2.5 h-2.5 bg-white border-2 rounded-full ${program.id === 'mommy-me' ? 'border-yellow-400' : 'border-violet-400'}`}></div><div className="flex items-start gap-3"><div className={`p-2 rounded-lg text-lg border border-gray-50 ${program.theme}`}>{item.icon}</div><div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.time}</p><p className="text-sm font-bold text-gray-900">{item.activity}</p></div></div></div>))}</div></div>);
+                    case 'Teachers': return (<div className="space-y-4 animate-enter"><h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Professional Team</h3>{program.teachers.map((teacher, idx) => (<div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)]"><div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${program.theme}`}><User className={`${program.accent} opacity-60`} size={20} /></div><div><h4 className="text-base font-bold text-gray-900">{teacher.name}</h4><div className="flex items-center gap-2 mt-1"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${program.theme} ${program.accent}`}>{teacher.role}</span><span className="text-[10px] text-gray-400">{teacher.exp}</span></div></div></div>))}</div>);
+                    default: return null;
+                }
+            };
+            return (
+                <div className="bg-white min-h-full pb-32 animate-enter">
+                    <div className="w-full h-[280px] relative rounded-b-[2.5rem] overflow-hidden" style={{ background: program.imgPlaceholder }}>
+                        <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px]" />
+                        <div className="absolute bottom-8 left-8 right-8"><span className="inline-block px-2.5 py-0.5 bg-white/60 backdrop-blur-md border border-white/40 rounded-full text-[10px] font-bold text-gray-800 uppercase tracking-wider mb-3 shadow-sm">{program.age}</span><h1 className="text-3xl font-extrabold text-gray-900 leading-tight mb-1">{program.title}</h1><p className="text-gray-600 font-medium text-sm">{program.titleCn}</p></div>
+                    </div>
+                    <div className="px-6 py-8">
+                        <div className="flex gap-2 mb-8 p-1 bg-gray-50/80 rounded-xl overflow-x-auto no-scrollbar border border-gray-100">{['Overview', 'Curriculum', 'Teachers'].map((tab) => (<button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 ${activeTab === tab ? 'bg-white text-violet-900 shadow-sm ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'}`}>{tab}</button>))}</div>
+                        <div className="min-h-[200px]">{renderContent()}</div>
+                    </div>
+                    <div className="fixed bottom-8 right-8 z-50"><button onClick={onBook} className="h-14 pl-6 pr-2 glass-dark rounded-full shadow-2xl flex items-center gap-3 active:scale-95 transition-transform group"><span className="font-bold text-sm">Book Class</span><div className="w-10 h-10 bg-white/10 text-white rounded-full flex items-center justify-center group-hover:bg-white group-hover:text-gray-900 transition-colors"><ArrowRight size={16} /></div></button></div>
+                </div>
+            );
+        };
+
+        const BookingPage = () => {
+            const [step, setStep] = useState(1);
+            const [selectedDate, setSelectedDate] = useState(null);
+            return (
+                <div className="min-h-full bg-[#FCFCFC] pt-24 px-6 pb-32">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2 animate-enter">Book a Visit</h1>
+                    <p className="text-gray-400 text-sm mb-6 animate-enter delay-100">填写信息，预约您的专属探园体验。</p>
+                    <div className="bg-white rounded-[2rem] p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] animate-enter delay-200 border border-gray-50">
+                        {step === 1 ? (
+                            <div className="space-y-6">
+                                <div><label className="text-[10px] font-bold text-violet-400 uppercase tracking-wide ml-1 mb-3 block">Select Date</label><CalendarWidget onDateSelect={setSelectedDate} selectedDate={selectedDate} /></div>
+                                <div className="space-y-4 pt-4 border-t border-gray-100">
+                                    <div className="space-y-1.5"><label className="text-[10px] font-bold text-violet-400 uppercase tracking-wide ml-1">Parent Name</label><input type="text" className="w-full bg-violet-50/50 border-none rounded-xl p-3.5 text-sm font-bold text-gray-900 placeholder-gray-300 focus:ring-2 focus:ring-violet-500/20 focus:bg-white transition-all" placeholder="您的姓名" /></div>
+                                    <div className="space-y-1.5"><label className="text-[10px] font-bold text-violet-400 uppercase tracking-wide ml-1">Phone Number</label><input type="tel" className="w-full bg-violet-50/50 border-none rounded-xl p-3.5 text-sm font-bold text-gray-900 placeholder-gray-300 focus:ring-2 focus:ring-violet-500/20 focus:bg-white transition-all" placeholder="联系电话" /></div>
+                                </div>
+                                <button onClick={() => setStep(2)} disabled={!selectedDate} className={`w-full h-12 rounded-xl font-bold text-sm mt-2 shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 group ${selectedDate ? 'glass-dark hover:shadow-xl' : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'}`}>Confirm Booking <ArrowRight size={16} className={selectedDate ? "group-hover:translate-x-1 transition-transform" : ""} /></button>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8"><div className="w-16 h-16 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-enter"><Check size={32} strokeWidth={3} /></div><h3 className="text-xl font-bold text-gray-900 mb-2">Request Sent</h3><p className="text-gray-500 text-xs font-medium mb-1">预约时间：{selectedDate?.toLocaleDateString()}</p><p className="text-gray-500 text-xs font-medium">福儿老师将尽快与您联系。</p><button onClick={() => setStep(1)} className="mt-6 text-xs font-bold text-violet-900 border-b border-violet-200 pb-0.5">Start New Booking</button></div>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-6 animate-enter delay-300">
+                        <div onClick={() => alert("模拟拨打电话")} className="bg-white p-5 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-center cursor-pointer active:scale-95 transition-transform hover:shadow-lg border border-gray-50 hover:border-violet-100"><div className="w-8 h-8 bg-violet-50 rounded-full flex items-center justify-center text-violet-700"><Phone size={14}/></div><span className="text-[10px] font-bold text-gray-900 uppercase">Call Us</span></div>
+                        <div onClick={() => alert("模拟打开地图")} className="bg-white p-5 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-center cursor-pointer active:scale-95 transition-transform hover:shadow-lg border border-gray-50 hover:border-violet-100"><div className="w-8 h-8 bg-violet-50 rounded-full flex items-center justify-center text-violet-700"><MapPin size={14}/></div><span className="text-[10px] font-bold text-gray-900 uppercase">Location</span></div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ProfilePage = ({ onNavigate }) => (
+            <div className="min-h-full bg-white pt-24 px-6 pb-32">
+                <div className="flex items-center gap-5 mb-10 animate-enter"><div className="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center text-2xl shadow-inner border border-white">👶</div><div><h1 className="text-xl font-bold text-gray-900">Welcome</h1><p className="text-gray-400 text-xs font-medium">Join our community</p></div></div>
+                <div className="space-y-3 animate-enter delay-100">
+                    {[
+                        {id: 'bookings', icon: Star, label: 'My Bookings', color: 'bg-yellow-50 text-yellow-600'},
+                        {id: 'growth', icon: Clock, label: 'Growth Record', color: 'bg-violet-50 text-violet-600'},
+                        {id: 'family', icon: User, label: 'Family Profile', color: 'bg-gray-50 text-gray-600'}
+                    ].map((item, i) => (
+                        <div 
+                            key={i} 
+                            onClick={() => onNavigate(item.id)}
+                            className="flex items-center justify-between p-4 bg-[#FCFCFC] rounded-2xl cursor-pointer active:bg-gray-100 transition-colors border border-gray-50 hover:border-violet-100"
+                        >
+                            <div className="flex items-center gap-4"><div className={`w-9 h-9 rounded-full ${item.color} flex items-center justify-center`}><item.icon size={16} /></div><span className="font-bold text-sm text-gray-900">{item.label}</span></div><div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white"><ChevronRight size={12} className="text-gray-400" /></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const FamilyProfileView = ({ onBack }) => {
+            return (
+                <div className="min-h-full bg-[#FCFCFC] pt-24 px-6 pb-32">
+                    <div className="flex justify-between items-center mb-6 animate-enter">
+                        <h1 className="text-2xl font-bold text-gray-900">Family Profile</h1>
+                        <button className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-violet-600 shadow-sm active:scale-90 transition-transform">
+                            <Settings size={20} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-6 animate-enter delay-100">
+                        {/* Children Section */}
+                        <section>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">My Children</h2>
+                                <button className="text-xs font-bold text-violet-600 flex items-center gap-1"><Plus size={14} /> Add</button>
+                            </div>
+                            
+                            {FAMILY_DATA.children.map((child, idx) => (
+                                <div key={idx} className="glass-panel rounded-[1.5rem] p-5 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-100/50 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                                    <div className="flex items-center gap-4 relative z-10">
+                                        <div className="w-16 h-16 rounded-full bg-yellow-50 border-2 border-white flex items-center justify-center text-3xl shadow-sm">
+                                            {child.avatar}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-bold text-gray-900">{child.name}</h3>
+                                            <p className="text-xs text-gray-500 font-medium mb-2">{child.age} • {child.class}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {child.tags.map(tag => (
+                                                    <span key={tag} className="px-2 py-0.5 rounded-md bg-white/80 border border-red-100 text-red-500 text-[10px] font-bold shadow-sm flex items-center gap-1">
+                                                        <Info size={10} /> {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button className="w-8 h-8 rounded-full bg-white/50 flex items-center justify-center text-gray-400 hover:text-gray-600"><Edit3 size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </section>
+
+                        {/* Guardians Section */}
+                        <section>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Guardians</h2>
+                            </div>
+                            <div className="glass-panel rounded-[1.5rem] divide-y divide-gray-100">
+                                {FAMILY_DATA.guardians.map((guardian, idx) => (
+                                    <div key={idx} className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center text-xl">{guardian.avatar}</div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                    {guardian.name}
+                                                    {guardian.primary && <span className="px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[8px] rounded uppercase">Primary</span>}
+                                                </h4>
+                                                <p className="text-xs text-gray-400">{guardian.role} • {guardian.phone}</p>
+                                            </div>
+                                        </div>
+                                        <button className="text-gray-300 hover:text-violet-600"><ChevronRight size={16} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Quick Settings */}
+                        <section className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-2 cursor-pointer active:scale-95 transition-transform">
+                                <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><Phone size={16} /></div>
+                                <span className="text-xs font-bold text-gray-900">Emergency<br/>Contact</span>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-2 cursor-pointer active:scale-95 transition-transform">
+                                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><MapPin size={16} /></div>
+                                <span className="text-xs font-bold text-gray-900">Home<br/>Address</span>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            );
+        };
+
+        const MyBookingsView = ({ onBack }) => {
+            return (
+                <div className="min-h-full bg-[#FCFCFC] pt-24 px-6 pb-32">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-6 animate-enter">My Bookings</h1>
+                    <div className="space-y-4">
+                        {BOOKINGS_DATA.map((booking, idx) => (
+                            <div key={booking.id} className="bg-white rounded-[1.5rem] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-100 animate-enter" style={{ animationDelay: `${idx * 0.1}s` }}>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider inline-block mb-2 ${booking.status === 'Confirmed' ? 'bg-violet-50 text-violet-600' : 'bg-gray-100 text-gray-500'}`}>{booking.status}</div>
+                                        <h3 className="text-lg font-bold text-gray-900">{booking.type}</h3>
+                                        <p className="text-sm text-gray-500 mt-0.5">{booking.theme}</p>
+                                    </div>
+                                    <div className="flex flex-col items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                        <span className="text-xs font-bold text-gray-400 uppercase">{booking.date.split(',')[0]}</span>
+                                        <span className="text-lg font-bold text-gray-900">{booking.date.split(' ')[2]}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mb-5"><Clock size={14} /> {booking.time}<span className="w-1 h-1 bg-gray-300 rounded-full"></span><MapPin size={14} /> {booking.location}</div>
+                                <div className="flex gap-2">
+                                    {booking.status === 'Confirmed' ? (
+                                        <><button className="flex-1 py-2.5 rounded-xl bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition-colors">Reschedule</button><button className="flex-1 py-2.5 rounded-xl glass-dark text-white text-xs font-bold shadow-md active:scale-95 transition-transform">Get Directions</button></>
+                                    ) : (
+                                        <button className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-400 text-xs font-bold">View Details</button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const GrowthRecordView = ({ onBack }) => {
+            return (
+                <div className="min-h-full bg-[#FCFCFC] pt-24 pb-32">
+                    <div className="px-6 mb-6">
+                        <h1 className="text-2xl font-bold text-gray-900 animate-enter">Growth Record</h1>
+                        <p className="text-sm text-gray-400 mt-1 animate-enter delay-100">Tracking every milestone.</p>
+                    </div>
+                    <div className="relative px-6 timeline-line">
+                        {GROWTH_RECORDS.map((record, idx) => (
+                            <div key={record.id} className="relative pl-10 pb-8 animate-enter" style={{ animationDelay: `${idx * 0.2}s` }}>
+                                <div className="absolute left-0 top-0 w-10 h-10 bg-white rounded-full border-4 border-[#F3F4F6] flex items-center justify-center z-10 shadow-sm"><div className="w-3 h-3 bg-violet-500 rounded-full"></div></div>
+                                <div className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
+                                    <div className="h-48 w-full bg-gray-100 relative">
+                                        <img src={record.img} alt={record.title} className="w-full h-full object-cover" />
+                                        <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-bold text-gray-800 flex items-center gap-1 shadow-sm"><CalendarDays size={12} /> {record.date}</div>
+                                    </div>
+                                    <div className="p-5">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <h3 className="text-lg font-bold text-gray-900">{record.title}</h3>
+                                            <div className="flex gap-1">{record.tags.map(tag => (<span key={tag} className="px-2 py-0.5 rounded-md bg-yellow-50 text-yellow-700 text-[10px] font-bold border border-yellow-100">{tag}</span>))}</div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 leading-relaxed mb-4 text-justify">{record.desc}</p>
+                                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                            <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-xs">👩‍🏫</div><span className="text-xs font-bold text-gray-500">{record.teacher}</span></div>
+                                            <div className="flex gap-3"><button className="text-gray-400 hover:text-red-500 transition-colors"><Heart size={18} /></button><button className="text-gray-400 hover:text-violet-500 transition-colors"><Share2 size={18} /></button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="relative pl-10 animate-enter delay-300">
+                            <div className="absolute left-0 top-0 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center z-10"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></div>
+                            <div className="py-2 text-xs font-bold text-gray-400 uppercase tracking-widest">Start of Journey</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('home');
+            const [navStack, setNavStack] = useState([]);
+            const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+
+            const handleTabChange = (tabId) => { setActiveTab(tabId); setNavStack([]); };
+            const pushPage = (program) => { setActiveTab('programs'); setNavStack([{ view: 'detail', data: program }]); };
+            
+            const pushProfileView = (viewId) => { 
+                if(viewId === 'bookings' || viewId === 'growth' || viewId === 'family') {
+                    setNavStack([{ view: viewId }]); 
+                }
+            };
+
+            const popPage = () => setNavStack([]);
+            const navigateToBooking = () => { setNavStack([]); setActiveTab('booking'); };
+            
+            const getCurrentTitle = () => { 
+                if (navStack.length > 0) {
+                    if (navStack[0].view === 'detail') return '';
+                    if (navStack[0].view === 'bookings') return 'My Bookings';
+                    if (navStack[0].view === 'growth') return 'Growth Record';
+                    if (navStack[0].view === 'family') return 'Family Profile';
+                }
+                return activeTab === 'home' ? 'Discover' : activeTab === 'programs' ? 'Programs' : activeTab === 'booking' ? 'Booking' : 'Profile'; 
+            };
+
+            return (
+                <div className="w-full max-w-[390px] h-[844px] bg-white rounded-[50px] shadow-2xl overflow-hidden relative border-[8px] border-black ring-1 ring-black/5 mt-10">
+                    <div className="absolute top-0 w-full h-12 z-50 flex justify-between items-end px-7 pb-2 pointer-events-none mix-blend-difference text-white"><span className="text-sm font-semibold">9:41</span><div className="flex gap-1.5 items-center"><div className="w-4 h-4 bg-current rounded-full opacity-0"></div><div className="flex gap-1"><div className="w-[3px] h-3 bg-current rounded-full"></div><div className="w-[3px] h-3 bg-current rounded-full"></div><div className="w-[3px] h-3 bg-current rounded-full"></div></div></div></div>
+                    <AIChatOverlay isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
+                    <NavBar title={getCurrentTitle()} showBack={navStack.length > 0} onBack={popPage} transparent={activeTab === 'home' || (navStack.length > 0 && navStack[0].view === 'detail')} />
+                    <div className="h-full overflow-y-auto no-scrollbar bg-white relative">
+                        {activeTab === 'home' && <HomePage navigateToProgram={(item) => item ? pushPage(item) : handleTabChange('programs')} onBook={navigateToBooking} />}
+                        
+                        {activeTab === 'programs' && (
+                            navStack.length > 0 && navStack[0].view === 'detail' 
+                            ? <ProgramDetail program={navStack[0].data} onBook={navigateToBooking} /> 
+                            : <ProgramsPage onSelect={pushPage} />
+                        )}
+                        
+                        {activeTab === 'booking' && <BookingPage />}
+                        
+                        {activeTab === 'profile' && (
+                            navStack.length > 0 
+                            ? (
+                                navStack[0].view === 'bookings' ? <MyBookingsView /> : 
+                                navStack[0].view === 'growth' ? <GrowthRecordView /> : 
+                                navStack[0].view === 'family' ? <FamilyProfileView /> : null
+                              )
+                            : <ProfilePage onNavigate={pushProfileView} />
+                        )}
+                    </div>
+                    {!isAIChatOpen && <button onClick={() => setIsAIChatOpen(true)} className="absolute bottom-28 right-6 z-50 w-14 h-14 glass-gradient rounded-full flex items-center justify-center text-white animate-bounce-slow active:scale-90 transition-transform"><Sparkles size={24} /></button>}
+                    {navStack.length === 0 && <FloatingTabBar activeTab={activeTab} onChange={handleTabChange} />}
+                    <div className="absolute bottom-2 w-full flex justify-center z-50 pointer-events-none"><div className="w-32 h-1.5 bg-black rounded-full" /></div>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
